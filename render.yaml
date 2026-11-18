@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: chess-bots
+    runtime: go
+    plan: free
+    buildCommand: go build -o app .
+    startCommand: ./app
+    healthCheckPath: /health
+

@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>Chess - Play vs Bots</title>
+  <style>
+    * {
+      box-sizing: border-box
+    }
+
+    body {
+      margin: 0;
+      background: #302e2b;
+      color: #fff;
+      font-family: Segoe UI, Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      min-height: 100vh
+    }
+
+    #app {
+      display: flex;
+      gap: 24px;
+      padding: 20px;
+      flex-wrap: wrap;
+      justify-content: center
+    }
+
+    .player {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 0;
+      font-weight: 600
+    }
+
+    .av {
+      width: 40px;
+      height: 40px;
+      border-radius: 4px;
+      background: #555;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px
+    }
+
+    .elo {
+      color: #aaa;
+      font-weight: 400
+    }
+
+    .cap {
+      font-size: 18px;
+      color: #ccc;
+      margin-left: 6px
+    }
+
+    #board {
+      display: grid;
+      grid-template-columns: repeat(8, 72px);
+      grid-template-rows: repeat(8, 72px);
+      border-radius: 4px;
+      overflow: hidden;
+      box-shadow: 0 4px 20px #0008
+    }
+
+    .sq {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 56px;
+      cursor: pointer;
+      user-select: none
+    }
+
+    .l {
+      background: #ebecd0
+    }
+
+    .d {
+      background: #779556
+    }
+
+    .sel {
+      background: #f5f682 !important
+    }
+
+    .last {
+      background: #bbcb2b !important
+    }
+
+    .chk {
+      background: radial-gradient(#ff0000, #e00 30%, transparent 80%) !important
+    }
+
+    .wp {
+      color: #fff;
+      text-shadow: 0 0 2px #000, 0 0 2px #000, 0 2px 3px #000
+    }
+
+    .bp {
+      color: #222;
+      text-shadow: 0 0 1px #fff
+    }
+
+    .dot::after {
+      content: "";
+      position: absolute;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: #0003
+    }
+
+    .ring::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border: 6px solid #0003;
+      border-radius: 50%
+    }
+
+    .co {
+      position: absolute;
+      font-size: 12px;
+      font-weight: 700
+    }
+
+    .co.r {
+      top: 2px;
+      left: 4px
+    }
+
+    .co.f {
+      bottom: 2px;
+      right: 4px
+    }
+
+    #side {
+      width: 320px;
+      background: #262421;
+      border-radius: 8px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 20px
+    }
+
+    .bot {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px;
+      border-radius: 6px;
+      background: #3a3835;
+      cursor: pointer;
+      border: 2px solid transparent
+    }
+
+    .bot:hover {
+      background: #45423e
+    }
+
+    .bot.on {
+      border-color: #81b64c
+    }
+
+    button {
+      background: #81b64c;
+      color: #fff;
+      border: 0;
+      border-radius: 6px;
+      padding: 12px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 0 #5d8a35
+    }
+
+    button:hover {
+      background: #95c95f
+    }
+
+    button.g {
+      background: #555;
+      box-shadow: 0 4px 0 #333
+    }
+
+    .row {
+      display: flex;
+      gap: 8px
+    }
+
+    .row button {
+      flex: 1
+    }
+
+    #moves {
+      background: #1f1e1c;
+      border-radius: 6px;
+      height: 200px;
+      overflow-y: auto;
+      padding: 8px;
+      font-family: monospace;
+      font-size: 14px
+    }
+
+    #status {
+      text-align: center;
+      font-weight: 600;
+      min-height: 22px
+    }
+
+    #modal {
+      position: fixed;
+      inset: 0;
+      background: #0009;
+      display: none;
+      align-items: center;
+      justify-content: center
+    }
+
+    #modal div {
+      background: #262421;
+      padding: 20px;
+      border-radius: 8px;
+      text-align: center
+    }
+
+    #modal span {
+      font-size: 56px;
+      cursor: pointer;
+      padding: 6px
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app">
+    <div>
+      <div class="player">
+        <div class="av" id="tav"></div><span id="tname"></span><span class="cap" id="tcap"></span>
+      </div>
+      <div id="board"></div>
+      <div class="player">
+        <div class="av">🙂</div><span>You</span><span class="cap" id="bcap"></span>
+      </div>
+    </div>
+    <div id="side">
+      <h2>♟ Play vs Bots</h2>
+      <div id="bots"></div>
+      <div class="row"><button class="g" id="cw">Play White</button><button class="g" id="cb">Play Black</button></div>
+      <button id="start">Play</button>
+      <div id="status"></div>
+      <div id="moves"></div>
+      <div class="row"><button class="g" id="resign">Resign</button><button class="g" id="flip">Flip</button></div>
+    </div>
+  </div>
+  <div id="modal">
+    <div>
+      <p>Promote to:</p>
+      <div id="pro"></div>
+    </div>
+  </div>
+  <script>
+    const BOTS = [
+      { name: "Mal Yigot", elo: 1, av: "🐌" },
+      { name: "Daşşaksız Hayro", elo: 100, av: "🐣" },
+      { name: "Nuhruto", elo: 500, av: "🍥" },
+      { name: "Dildocu Ali", elo: 800, av: "😈" },
+      { name: "Sigma Behlül", elo: 5000, av: "🗿" }];
+    const G = { K: "♚", Q: "♛", R: "♜", B: "♝", N: "♞", P: "♟" };
+    const isW = p => p === p.toUpperCase();
+    const VAL = { p: 100, n: 320, b: 330, r: 500, q: 900, k: 0 };
+    const PST = {
+      p: [0, 0, 0, 0, 0, 0, 0, 0, 50, 50, 50, 50, 50, 50, 50, 50, 10, 10, 20, 30, 30, 20, 10, 10, 5, 5, 10, 25, 25, 10, 5, 5, 0, 0, 0, 20, 20, 0, 0, 0, 5, -5, -10, 0, 0, -10, -5, 5, 5, 10, 10, -20, -20, 10, 10, 5, 0, 0, 0, 0, 0, 0, 0, 0],
+      n: [-50, -40, -30, -30, -30, -30, -40, -50, -40, -20, 0, 0, 0, 0, -20, -40, -30, 0, 10, 15, 15, 10, 0, -30, -30, 5, 15, 20, 20, 15, 5, -30, -30, 0, 15, 20, 20, 15, 0, -30, -30, 5, 10, 15, 15, 10, 5, -30, -40, -20, 0, 5, 5, 0, -20, -40, -50, -40, -30, -30, -30, -30, -40, -50],
+      b: [-20, -10, -10, -10, -10, -10, -10, -20, -10, 0, 0, 0, 0, 0, 0, -10, -10, 0, 5, 10, 10, 5, 0, -10, -10, 5, 5, 10, 10, 5, 5, -10, -10, 0, 10, 10, 10, 10, 0, -10, -10, 10, 10, 10, 10, 10, 10, -10, -10, 5, 0, 0, 0, 0, 5, -10, -20, -10, -10, -10, -10, -10, -10, -20],
+      r: [0, 0, 0, 0, 0, 0, 0, 0, 5, 10, 10, 10, 10, 10, 10, 5, -5, 0, 0, 0, 0, 0, 0, -5, -5, 0, 0, 0, 0, 0, 0, -5, -5, 0, 0, 0, 0, 0, 0, -5, -5, 0, 0, 0, 0, 0, 0, -5, -5, 0, 0, 0, 0, 0, 0, -5, 0, 0, 0, 5, 5, 0, 0, 0],
+      q: [-20, -10, -10, -5, -5, -10, -10, -20, -10, 0, 0, 0, 0, 0, 0, -10, -10, 0, 5, 5, 5, 5, 0, -10, -5, 0, 5, 5, 5, 5, 0, -5, 0, 0, 5, 5, 5, 5, 0, -5, -10, 5, 5, 5, 5, 5, 0, -10, -10, 0, 5, 0, 0, 0, 0, -10, -20, -10, -10, -5, -5, -10, -10, -20],
+      k: [-30, -40, -40, -50, -50, -40, -40, -30, -30, -40, -40, -50, -50, -40, -40, -30, -30, -40, -40, -50, -50, -40, -40, -30, -30, -40, -40, -50, -50, -40, -40, -30, -20, -30, -30, -40, -40, -30, -30, -20, -10, -20, -20, -20, -20, -20, -20, -10, 20, 20, 0, 0, 0, 0, 20, 20, 20, 30, 10, 0, 0, 10, 30, 20]
+    };
+    function init() {
+      const b = Array(64).fill(null), r = "RNBQKBNR"; for (let i = 0; i < 8; i++) { b[i] = r[i].toLowerCase(); b[8 + i] = "p"; b[48 + i] = "P"; b[56 + i] = r[i]; }
+      return { b, turn: "w", cr: { K: 1, Q: 1, k: 1, q: 1 }, ep: -1, hm: 0 };
+    }
+    function attacked(b, sq, byW) {
+      const r = sq >> 3, c = sq & 7, at = (rr, cc) => rr >= 0 && rr < 8 && cc >= 0 && cc < 8 ? b[rr * 8 + cc] : undefined;
+      const own = p => p && isW(p) === byW;
+      const pr = byW ? r + 1 : r - 1; for (const dc of [-1, 1]) { const p = at(pr, c + dc); if (own(p) && p.toLowerCase() === "p") return true; }
+      for (const [a, d] of [[1, 2], [2, 1], [-1, 2], [-2, 1], [1, -2], [2, -1], [-1, -2], [-2, -1]]) { const p = at(r + a, c + d); if (own(p) && p.toLowerCase() === "n") return true; }
+      for (let a = -1; a <= 1; a++)for (let d = -1; d <= 1; d++) {
+        if (!a && !d) continue; const p = at(r + a, c + d); if (own(p) && p.toLowerCase() === "k") return true;
+        let rr = r + a, cc = c + d; while (rr >= 0 && rr < 8 && cc >= 0 && cc < 8) { const q = b[rr * 8 + cc]; if (q) { if (own(q)) { const t = q.toLowerCase(); if (t === "q" || (a && d ? t === "b" : t === "r")) return true; } break; } rr += a; cc += d; }
+      }
+      return false;
+    }
+    function pseudo(s) {
+      const out = [], w = s.turn === "w", b = s.b;
+      const add = (f, t, x = {}) => { const p = b[f].toLowerCase(); if (p === "p" && (t < 8 || t > 55)) for (const q of "qrbn") out.push({ f, t, pr: q, cap: b[t] }); else out.push({ f, t, cap: b[t] || (x.ep ? "p" : null), ...x }); };
+      for (let i = 0; i < 64; i++) {
+        const p = b[i]; if (!p || isW(p) !== w) continue; const r = i >> 3, c = i & 7, t = p.toLowerCase();
+        if (t === "p") {
+          const d = w ? -1 : 1, fw = i + d * 8;
+          if (fw >= 0 && fw < 64 && !b[fw]) { add(i, fw); if (r === (w ? 6 : 1) && !b[fw + d * 8]) add(i, fw + d * 8, { dbl: 1 }); }
+          for (const dc of [-1, 1]) {
+            const cc = c + dc, rr = r + d; if (cc < 0 || cc > 7 || rr < 0 || rr > 7) continue; const to = rr * 8 + cc;
+            if (b[to] && isW(b[to]) !== w) add(i, to); else if (to === s.ep) add(i, to, { ep: 1 });
+          }
+        }
+        else {
+          const dirs = t === "n" ? [[1, 2], [2, 1], [-1, 2], [-2, 1], [1, -2], [2, -1], [-1, -2], [-2, -1]] : t === "b" ? [[1, 1], [1, -1], [-1, 1], [-1, -1]] : t === "r" ? [[1, 0], [-1, 0], [0, 1], [0, -1]] : [[1, 1], [1, -1], [-1, 1], [-1, -1], [1, 0], [-1, 0], [0, 1], [0, -1]];
+          const slide = t === "b" || t === "r" || t === "q";
+          for (const [a, d] of dirs) { let rr = r + a, cc = c + d; while (rr >= 0 && rr < 8 && cc >= 0 && cc < 8) { const to = rr * 8 + cc; if (b[to]) { if (isW(b[to]) !== w) add(i, to); break; } add(i, to); if (!slide) break; rr += a; cc += d; } }
+          if (t === "k") {
+            const h = w ? 60 : 4, K = w ? "K" : "k", Q = w ? "Q" : "q"; if (i === h && !attacked(b, h, !w)) {
+              if (s.cr[K] && !b[h + 1] && !b[h + 2] && b[h + 3] === (w ? "R" : "r") && !attacked(b, h + 1, !w) && !attacked(b, h + 2, !w)) add(i, h + 2, { cs: 1 });
+              if (s.cr[Q] && !b[h - 1] && !b[h - 2] && !b[h - 3] && b[h - 4] === (w ? "R" : "r") && !attacked(b, h - 1, !w) && !attacked(b, h - 2, !w)) add(i, h - 2, { cs: 1 });
+            }
+          }
+        }
+      }
+      return out;
+    }
+    function apply(s, m) {
+      const b = s.b.slice(), p = b[m.f], w = isW(p); b[m.t] = m.pr ? (w ? m.pr.toUpperCase() : m.pr) : p; b[m.f] = null;
+      if (m.ep) b[m.t + (w ? 8 : -8)] = null;
+      if (m.cs) { if (m.t > m.f) { b[m.t - 1] = b[m.t + 1]; b[m.t + 1] = null; } else { b[m.t + 1] = b[m.t - 2]; b[m.t - 2] = null; } }
+      const cr = { ...s.cr }; for (const [q, k] of [[60, "KQ"], [4, "kq"], [63, "K"], [56, "Q"], [7, "k"], [0, "q"]]) if (m.f === q || m.t === q) for (const x of k) cr[x] = 0;
+      return { b, turn: w ? "b" : "w", cr, ep: m.dbl ? (m.f + m.t) / 2 : -1, hm: (p.toLowerCase() === "p" || m.cap) ? 0 : s.hm + 1 };
+    }
+    const kingSq = (b, w) => b.indexOf(w ? "K" : "k");
+    const inCheck = s => attacked(s.b, kingSq(s.b, s.turn === "w"), s.turn !== "w");
+    function legal(s) { return pseudo(s).filter(m => { const n = apply(s, m); return !attacked(n.b, kingSq(n.b, s.turn === "w"), s.turn !== "w"); }); }
+    function evaluate(s) { let v = 0; for (let i = 0; i < 64; i++) { const p = s.b[i]; if (!p) continue; const t = p.toLowerCase(), w = isW(p); v += (VAL[t] + PST[t][w ? i : (7 - (i >> 3)) * 8 + (i & 7)]) * (w ? 1 : -1); } return s.turn === "w" ? v : -v; }
+    const order = ms => ms.sort((a, b) => ((b.cap ? VAL[b.cap.toLowerCase()] * 10 - VAL[s0(b)] : 0) + (b.pr ? 800 : 0)) - ((a.cap ? VAL[a.cap.toLowerCase()] * 10 - VAL[s0(a)] : 0) + (a.pr ? 800 : 0)));
+    let CUR; const s0 = m => CUR.b[m.f].toLowerCase();
+    function qs(s, a, bt, d) {
+      const st = evaluate(s); if (st >= bt) return bt; if (st > a) a = st; if (d <= 0) return a;
+      CUR = s; const ms = order(legal(s).filter(m => m.cap)); for (const m of ms) { const v = -qs(apply(s, m), -bt, -a, d - 1); if (v >= bt) return bt; if (v > a) a = v; } return a;
+    }
+    function search(s, d, a, bt) {
+      if (d === 0) return qs(s, a, bt, 4); CUR = s; const ms = order(legal(s));
+      if (!ms.length) return inCheck(s) ? -100000 - d : 0;
+      for (const m of ms) { const v = -search(apply(s, m), d - 1, -bt, -a); if (v >= bt) return bt; if (v > a) a = v; } return a;
+    }
+    function botMove(s, elo) {
+      const ms = legal(s), rnd = a => a[Math.floor(Math.random() * a.length)];
+      if (elo <= 1) return rnd(ms);
+      if (elo <= 100) { const c = ms.filter(m => m.cap); return c.length && Math.random() < .35 ? rnd(c) : rnd(ms); }
+      const depth = elo <= 500 ? 1 : elo <= 800 ? 2 : 4, noise = elo <= 500 ? 150 : elo <= 800 ? 40 : 0;
+      let best = null, bv = -1e9; CUR = s; for (const m of order(ms)) { const v = -search(apply(s, m), depth - 1, -1e9, 1e9) + Math.random() * noise; if (v > bv) { bv = v; best = m; } } return best;
+    }
+    function san(s, m, ms) {
+      const p = s.b[m.f].toLowerCase(), f = "abcdefgh", sq = i => f[i & 7] + (8 - (i >> 3)); let r;
+      if (m.cs) r = m.t > m.f ? "O-O" : "O-O-O"; else if (p === "p") r = (m.cap ? f[m.f & 7] + "x" : "") + sq(m.t) + (m.pr ? "=" + m.pr.toUpperCase() : "");
+      else { const amb = ms.some(o => o !== m && o.t === m.t && o.f !== m.f && s.b[o.f] === s.b[m.f]); r = p.toUpperCase() + (amb ? f[m.f & 7] : "") + (m.cap ? "x" : "") + sq(m.t); }
+      const n = apply(s, m); if (inCheck(n)) r += legal(n).length ? "+" : "#"; return r;
+    }
+    // ---- UI ----
+    let S = init(), bot = 0, color = "w", flip = false, sel = -1, last = null, hist = [], over = true, thinking = false, LM = [];
+    const $ = id => document.getElementById(id);
+    function renderBots() { $("bots").innerHTML = BOTS.map((x, i) => `<div class="bot ${i === bot ? "on" : ""}" onclick="bot=${i};renderBots();renderTop()"><div class="av">${x.av}</div><div>${x.name}<br><span class="elo">${x.elo} ELO</span></div></div>`).join(""); }
+    function renderTop() { const x = BOTS[bot]; $("tav").textContent = x.av; $("tname").innerHTML = `${x.name} <span class="elo">(${x.elo})</span>`; }
+    function render() {
+      const bd = $("board"); bd.innerHTML = ""; const tg = sel >= 0 ? LM.filter(m => m.f === sel) : []; const ck = inCheck(S) ? kingSq(S.b, S.turn === "w") : -1;
+      for (let k = 0; k < 64; k++) {
+        const i = flip ? 63 - k : k, r = i >> 3, c = i & 7, d = document.createElement("div");
+        d.className = "sq " + ((r + c) % 2 ? "d" : "l") + (i === sel ? " sel" : "") + (last && (i === last.f || i === last.t) ? " last" : "") + (i === ck ? " chk" : "");
+        const p = S.b[i]; if (p) { d.innerHTML = `<span class="${isW(p) ? "wp" : "bp"}">${G[p.toUpperCase()]}</span>`; }
+        if (tg.some(m => m.t === i)) d.classList.add(p ? "ring" : "dot");
+        if ((flip ? 7 - c : c) === 0) d.innerHTML += `<span class="co r" style="color:${(r + c) % 2 ? "#ebecd0" : "#779556"}">${8 - r}</span>`;
+        if ((flip ? 7 - r : r) === 7) d.innerHTML += `<span class="co f" style="color:${(r + c) % 2 ? "#ebecd0" : "#779556"}">${"abcdefgh"[c]}</span>`;
+        d.onclick = () => click(i); bd.appendChild(d);
+      }
+      let h = ""; for (let i = 0; i < hist.length; i += 2)h += `${i / 2 + 1}. ${hist[i]} ${hist[i + 1] || ""}<br>`; $("moves").innerHTML = h; $("moves").scrollTop = 1e9;
+      const cnt = w => { const st = { p: 8, n: 2, b: 2, r: 2, q: 1 }; for (const p of S.b) if (p && isW(p) === w && st[p.toLowerCase()] !== undefined) st[p.toLowerCase()]--; return Object.entries(st).map(([t, n]) => G[t.toUpperCase()].repeat(Math.max(0, n))).join(""); };
+      $("bcap").textContent = cnt(color !== "w"); $("tcap").textContent = cnt(color === "w");
+    }
+    function click(i) {
+      if (over || thinking || S.turn !== color) return; const p = S.b[i];
+      if (sel >= 0) { const ms = LM.filter(m => m.f === sel && m.t === i); if (ms.length) { if (ms[0].pr) return askPromo(ms); return doMove(ms[0]); } }
+      sel = p && isW(p) === (color === "w") ? i : -1; render();
+    }
+    function askPromo(ms) {
+      $("modal").style.display = "flex"; $("pro").innerHTML = ""; for (const q of "qrbn") {
+        const sp = document.createElement("span"); sp.className = color === "w" ? "wp" : "bp"; sp.textContent = G[q.toUpperCase()];
+        sp.onclick = () => { $("modal").style.display = "none"; doMove(ms.find(m => m.pr === q)); }; $("pro").appendChild(sp);
+      }
+    }
+    function doMove(m) {
+      hist.push(san(S, m, LM)); S = apply(S, m); last = m; sel = -1; LM = legal(S); render(); if (checkEnd()) return;
+      if (S.turn !== color) { thinking = true; $("status").textContent = BOTS[bot].name + " is thinking..."; setTimeout(() => { thinking = false; $("status").textContent = "Your move"; doMove(botMove(S, BOTS[bot].elo)); }, 350); } else $("status").textContent = "Your move";
+    }
+    function insufficient() { const p = S.b.filter(x => x && x.toLowerCase() !== "k"); return !p.length || (p.length === 1 && "nb".includes(p[0].toLowerCase())); }
+    function checkEnd() {
+      let msg = null; if (!LM.length) msg = inCheck(S) ? (S.turn === color ? `Checkmate! ${BOTS[bot].name} wins 😢` : "Checkmate! You win! 🎉") : "Stalemate - Draw";
+      else if (S.hm >= 100) msg = "Draw by 50-move rule"; else if (insufficient()) msg = "Draw - insufficient material";
+      if (msg) { over = true; $("status").textContent = msg; } return !!msg;
+    }
+    function start() { S = init(); hist = []; last = null; sel = -1; over = false; flip = color === "b"; LM = legal(S); render(); $("status").textContent = "Your move"; if (color === "b") doMove(botMove(S, BOTS[bot].elo)); }
+    $("start").onclick = start; $("cw").onclick = () => { color = "w"; upc() }; $("cb").onclick = () => { color = "b"; upc() };
+    function upc() { $("cw").style.background = color === "w" ? "#81b64c" : ""; $("cb").style.background = color === "b" ? "#81b64c" : ""; }
+    $("resign").onclick = () => { if (!over) { over = true; $("status").textContent = `You resigned. ${BOTS[bot].name} wins`; } };
+    $("flip").onclick = () => { flip = !flip; render(); };
+    renderBots(); renderTop(); upc(); LM = legal(S); render(); $("status").textContent = "Choose a bot and press Play";
+  </script>
+</body>
+
+</html>
